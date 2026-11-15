@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cat & Mouse: Living Room Chase (v0.002)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      touch-action: manipulation;
+    }
+    .arcade-font {
+      font-family: 'Fredoka', sans-serif;
+    }
+    .card-choice {
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+    .card-choice:hover {
+      transform: translateY(-4px);
+    }
+    @keyframes pulseGlow {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.25); }
+    }
+    .speed-bar-active {
+      animation: pulseGlow 0.45s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-stone-950 text-stone-100 min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 overflow-x-hidden select-none">
+
+  <!-- Persistent Version Corner Badge -->
+  <div id="versionBadge" class="fixed bottom-3 right-3 z-50 bg-stone-900/90 border border-amber-400/40 text-amber-300/90 text-[11px] font-extrabold px-3 py-1 rounded-full shadow-2xl backdrop-blur-md pointer-events-none">
+    v0.002
+  </div>
+
+  <!-- Start Menu Overlay -->
+  <div id="startOverlay" class="fixed inset-0 z-40 bg-stone-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 overflow-y-auto">
+    <div class="max-w-4xl w-full text-center space-y-5 my-auto">
+      <div class="space-y-2">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 text-xs sm:text-sm font-bold tracking-wider uppercase shadow-inner">
+          <span>🐾 Living Room Chase</span>
+          <span>•</span>
+          <span>v0.002</span>
+        </div>
+        <h1 class="arcade-font text-3xl sm:text-5xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-orange-300 to-amber-500 drop-shadow-md">
+          Cat & Mouse
+        </h1>
+        <p class="text-stone-300 text-sm sm:text-base max-w-xl mx-auto font-medium">
+          Choose <strong class="text-amber-300">Solo vs AI</strong> or play <strong class="text-emerald-300">Multiplayer with Friends</strong> as the Cat, Mouse, or Owner!
+        </p>
+      </div>
+
+      <!-- Mode Switcher & Multiplayer Lobby Panel -->
+      <div class="max-w-2xl mx-auto bg-stone-900/90 border border-stone-700/80 rounded-2xl p-4 shadow-xl space-y-3">
+        <div class="flex flex-wrap items-center justify-center gap-2">
+          <button id="modeSoloBtn" type="button" class="px-4 py-2 rounded-xl bg-amber-500 text-stone-950 arcade-font font-bold text-sm shadow cursor-pointer">
+            🎮 Solo vs AI
+          </button>
+          <button id="modeMultiBtn" type="button" class="px-4 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 arcade-font font-bold text-sm border border-stone-600 cursor-pointer">
+            🌐 Play with Friends (Multiplayer)
+          </button>
+        </div>
+
+        <!-- Multiplayer Room Controls (Hidden in Solo Mode) -->
+        <div id="multiplayerLobbyControls" class="hidden pt-2 border-t border-stone-800 space-y-3">
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-2">
+            <button id="createRoomBtn" type="button" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-extrabold text-xs sm:text-sm shadow cursor-pointer">
+              + Create New Room
+            </button>
+            <div class="flex items-center gap-1.5 w-full sm:w-auto justify-center">
+              <input id="roomCodeInput" type="text" maxlength="6" placeholder="ROOM CODE" class="w-32 px-3 py-2 rounded-xl bg-stone-950 border border-stone-600 text-center font-mono font-extrabold uppercase text-amber-300 text-sm tracking-widest focus:outline-none focus:border-amber-400" />
+              <button id="joinRoomBtn" type="button" class="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-stone-950 font-extrabold text-xs sm:text-sm shadow cursor-pointer">
+                Join Room
+              </button>
+            </div>
+          </div>
+
+          <div id="activeRoomBanner" class="hidden flex flex-wrap items-center justify-between gap-2 bg-stone-950/90 border border-emerald-400/35 rounded-xl px-3.5 py-2 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-stone-400">Room Code:</span>
+              <span id="currentRoomCodeDisplay" class="font-mono font-extrabold text-base text-emerald-300 tracking-widest">------</span>
+              <button id="copyRoomCodeBtn" type="button" class="px-2 py-0.5 rounded bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-600 font-bold cursor-pointer">
+                Copy
+              </button>
+            </div>
+            <div id="roomStatusText" class="text-emerald-300 font-bold">
+              Connected! Pick an open role below to start.
+            </div>
+          </div>
+          <p id="lobbyErrorText" class="hidden text-xs font-bold text-rose-400"></p>
+        </div>
+      </div>
+
+      <!-- 3 Character Selection Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left max-w-3xl mx-auto">
+        <!-- CAT CARD -->
+        <button id="chooseCatBtn" type="button" class="card-choice group bg-gradient-to-br from-amber-950/90 via-orange-950/80 to-stone-900 border-2 border-amber-400/45 hover:border-amber-300 rounded-2xl p-5 shadow-xl flex flex-col justify-between cursor-pointer text-left focus:outline-none">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                🐱
+              </div>
+              <span id="catSlotBadge" class="bg-amber-400 text-stone-950 arcade-font font-bold text-xs uppercase px-3 py-1 rounded-full shadow">
+                Hunter • [1]
+              </span>
+            </div>
+            <h2 class="arcade-font text-2xl font-bold text-amber-200 mb-1">Play as Cat</h2>
+            <p class="text-stone-300 text-xs sm:text-sm leading-relaxed mb-4">
+              Pump your <strong class="text-amber-300">Fast Speed Bar</strong> to catch the nearby Mouse before he reaches the far hole. Drink milk bowls for a 4s boost! Avoid the Owner.
+            </p>
+          </div>
+          <div class="space-y-2 border-t border-amber-400/25 pt-3">
+            <div class="flex items-center gap-2 text-xs text-amber-200 font-bold">
+              <span>🥛 Powerup:</span>
+              <span>Milk gives 4s speed boost</span>
+            </div>
+            <div id="catCardActionLabel" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-stone-950 arcade-font font-bold text-center text-base shadow-md group-hover:brightness-110">
+              Play as Cat →
+            </div>
+          </div>
+        </button>
+
+        <!-- MOUSE CARD -->
+        <button id="chooseMouseBtn" type="button" class="card-choice group bg-gradient-to-br from-sky-950/90 via-blue-950/80 to-stone-900 border-2 border-sky-400/45 hover:border-sky-300 rounded-2xl p-5 shadow-xl flex flex-col justify-between cursor-pointer text-left focus:outline-none">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-14 h-14 rounded-2xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                🐭
+              </div>
+              <span id="mouseSlotBadge" class="bg-sky-400 text-stone-950 arcade-font font-bold text-xs uppercase px-3 py-1 rounded-full shadow">
+                Scurry • [2]
+              </span>
+            </div>
+            <h2 class="arcade-font text-2xl font-bold text-sky-200 mb-1">Play as Mouse</h2>
+            <p class="text-stone-300 text-xs sm:text-sm leading-relaxed mb-4">
+              Scurry under tables, eat cheese for a 2s speed boost, and escape into the wall hole in the top-right Kitchen!
+            </p>
+          </div>
+          <div class="space-y-2 border-t border-sky-400/25 pt-3">
+            <div class="flex items-center gap-2 text-xs text-sky-200 font-bold">
+              <span>🧀 Powerup:</span>
+              <span>Cheese gives 2s speed boost</span>
+            </div>
+            <div id="mouseCardActionLabel" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-500 text-stone-950 arcade-font font-bold text-center text-base shadow-md group-hover:brightness-110">
+              Play as Mouse →
+            </div>
+          </div>
+        </button>
+
+        <!-- OWNER CARD -->
+        <button id="chooseOwnerBtn" type="button" class="card-choice group bg-gradient-to-br from-rose-950/90 via-amber-950/80 to-stone-900 border-2 border-rose-400/45 hover:border-rose-300 rounded-2xl p-5 shadow-xl flex flex-col justify-between cursor-pointer text-left focus:outline-none">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                🏠
+              </div>
+              <span id="ownerSlotBadge" class="bg-rose-400 text-stone-950 arcade-font font-bold text-xs uppercase px-3 py-1 rounded-full shadow">
+                Caretaker • [3]
+              </span>
+            </div>
+            <h2 class="arcade-font text-2xl font-bold text-rose-300 mb-1">Play as Owner</h2>
+            <p class="text-stone-300 text-xs sm:text-sm leading-relaxed mb-4">
+              Catch the Cat before she escapes the house! Use <strong class="text-amber-200">SPACE</strong> for a lunge speed boost. Watch out for her claws (3s cooldown).
+            </p>
+          </div>
+          <div class="space-y-2 border-t border-rose-400/25 pt-3">
+            <div class="flex items-center gap-2 text-xs text-amber-200 font-bold">
+              <span>❤️ Tip:</span>
+              <span>Mouse escape is okay—focus on the Cat!</span>
+            </div>
+            <div id="ownerCardActionLabel" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-400 text-stone-950 arcade-font font-bold text-center text-base shadow-md group-hover:brightness-110">
+              Play as Owner →
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-center gap-4 text-xs text-stone-400 pt-1">
+        <span>⌨️ Move: WASD / Arrows / Touch Joystick</span>
+        <span>•</span>
+        <span>⚡ Speed / Lunge: SPACE / SHIFT / Boost Button</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Game Viewport Container -->
+  <div class="w-full max-w-6xl flex-1 flex flex-col gap-2.5 justify-between">
+    
+    <!-- Top HUD Bar -->
+    <div class="flex flex-wrap items-start justify-between gap-2.5">
+      <!-- Role & Objective Pill -->
+      <div class="bg-stone-900/90 backdrop-blur-md border border-amber-200/20 rounded-2xl px-4 py-2.5 shadow-xl flex items-center gap-3">
+        <div id="hudRoleEmoji" class="text-3xl bg-amber-500/20 w-11 h-11 rounded-xl flex items-center justify-center border border-amber-400/30">🐱</div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="hudRoleTitle" class="arcade-font text-base sm:text-lg font-bold text-amber-200">Playing as Cat</span>
+            <span id="hudRoomBadge" class="hidden text-xs font-mono font-extrabold bg-emerald-950 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-400/40">ROOM: ------</span>
+            <span id="hudTimer" class="text-xs font-extrabold bg-stone-800 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">00:00</span>
+            <button id="audioMuteBtn" type="button" class="text-xs font-bold bg-stone-800 hover:bg-stone-700 text-stone-200 px-2.5 py-0.5 rounded-full border border-stone-600 cursor-pointer" title="Toggle Chill Music">
+              🎵 Chill On
+            </button>
+            <button id="menuQuickBtn" type="button" class="text-xs font-bold bg-stone-800 hover:bg-stone-700 text-stone-200 px-2.5 py-0.5 rounded-full border border-stone-600 cursor-pointer">
+              Menu
+            </button>
+          </div>
+          <p id="hudObjectiveText" class="text-xs text-stone-300 mt-0.5">Pump your Fast Speed Bar to catch the Mouse! Avoid the Owner!</p>
+
+          <!-- Owner Mode Target Status Row -->
+          <div id="ownerTargetsRow" class="hidden flex flex-wrap items-center gap-1.5 mt-1.5">
+            <span id="catCatchPill" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-200 border border-orange-400/40">🐱 Cat: Free</span>
+            <span id="mouseCatchPill" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-200 border border-sky-400/40">🐭 Mouse: Scurrying</span>
+            <span id="catScratchCooldownPill" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-400/40">🐾 Cat Claws: Ready!</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right HUD Stack: Owner Health Bar + Fast Speed / Stamina Bar -->
+      <div class="flex flex-wrap items-center gap-2.5 ml-auto">
+        <!-- Owner Health Bar (Visible in Owner Mode) -->
+        <div id="ownerHealthPanel" class="hidden bg-stone-900/90 backdrop-blur-md border border-rose-400/35 rounded-2xl px-4 py-2.5 shadow-xl min-w-[205px]">
+          <div class="flex items-center justify-between text-xs font-bold mb-1">
+            <span class="text-rose-200">Owner Health</span>
+            <span id="ownerHpText" class="text-rose-300 font-extrabold">100 / 100 HP</span>
+          </div>
+          <div class="w-full h-3 bg-stone-800 rounded-full overflow-hidden border border-stone-700">
+            <div id="ownerHpFill" class="h-full bg-gradient-to-r from-rose-500 to-emerald-400 transition-all duration-150" style="width: 100%"></div>
+          </div>
+          <div id="ownerHeartsDisplay" class="text-xs mt-1 tracking-wider">❤️❤️❤️❤️</div>
+        </div>
+
+        <!-- Speed / Stamina / Lunge Bar -->
+        <div class="bg-stone-900/90 backdrop-blur-md border border-amber-300/25 rounded-2xl px-4 py-2.5 shadow-xl min-w-[235px] sm:min-w-[270px]">
+          <div class="flex items-center justify-between text-xs font-bold mb-1">
+            <span id="speedBarTitle" class="text-amber-200">⚡ Fast Speed Bar</span>
+            <div class="flex items-center gap-1.5">
+              <span id="pickupBoostBadge" class="hidden text-[10px] font-extrabold bg-emerald-500/25 text-emerald-200 border border-emerald-400/40 px-2 py-0.5 rounded-full">BOOST!</span>
+              <span id="speedBarPercent" class="text-amber-300 font-extrabold">0%</span>
+            </div>
+          </div>
+          <div class="w-full h-3.5 bg-stone-800 rounded-full overflow-hidden border border-stone-700 p-0.5">
+            <div id="speedBarFill" class="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 transition-all duration-75" style="width: 0%"></div>
+          </div>
+          <div id="speedBarHint" class="text-[11px] text-stone-400 mt-1">
+            Tap/Hold <kbd class="bg-stone-700 text-amber-200 px-1.5 rounded">SPACE</kbd> to rev up speed!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Responsive Game Canvas Container -->
+    <div id="canvasWrapper" class="relative w-full flex-1 min-h-[360px] sm:min-h-[460px] bg-stone-900 rounded-3xl overflow-hidden border-2 border-amber-200/20 shadow-2xl">
+      <canvas id="gameCanvas" tabindex="0" class="block w-full h-full focus:outline-none"></canvas>
+
+      <!-- Desktop Control Hint Pill -->
+      <div class="hidden md:flex items-center gap-3 absolute bottom-3 left-3 bg-stone-950/75 backdrop-blur-md border border-stone-700/80 px-3.5 py-1.5 rounded-full text-xs text-stone-300 pointer-events-none">
+        <span>Move: <strong class="text-stone-100">WASD / Arrows</strong></span>
+        <span>•</span>
+        <span id="desktopBoostHint">Speed Up: <strong class="text-amber-200">Tap / Hold SPACE</strong></span>
+      </div>
+
+      <!-- Mobile / Touch Controls Overlay -->
+      <div class="md:hidden absolute inset-x-3 bottom-3 flex items-end justify-between pointer-events-none">
+        <!-- Virtual Joystick -->
+        <div id="virtualJoystick" class="w-28 h-28 rounded-full bg-stone-950/60 border-2 border-stone-500/50 backdrop-blur-sm relative flex items-center justify-center pointer-events-auto touch-none">
+          <div id="joystickThumb" class="w-11 h-11 rounded-full bg-amber-400/90 border-2 border-amber-100 shadow-lg pointer-events-none"></div>
+        </div>
+
+        <!-- Speed Pump / Boost Button -->
+        <button id="speedPumpBtn" type="button" class="px-5 py-4 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-stone-950 arcade-font font-extrabold text-base shadow-xl border-2 border-amber-200 active:scale-95 pointer-events-auto">
+          ⚡ PUMP SPEED
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- End-of-Round Modal -->
+  <div id="gameOverModal" class="hidden fixed inset-0 z-50 bg-stone-950/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-stone-900 border-2 border-amber-400/40 rounded-3xl p-6 text-center shadow-2xl space-y-4">
+      <div id="winEmoji" class="text-6xl">🏆</div>
+      <h2 id="winTitle" class="arcade-font text-3xl font-extrabold text-emerald-300">Victory!</h2>
+      <p id="winDesc" class="text-stone-300 text-sm leading-relaxed">
+        Great job! Ready for another round?
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3 pt-2">
+        <button id="restartBtn" type="button" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-stone-950 arcade-font font-bold text-base shadow-lg hover:brightness-110 cursor-pointer">
+          Play Again ↻
+        </button>
+        <button id="changeRoleBtn" type="button" class="flex-1 py-3 px-4 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-600 arcade-font font-bold text-base cursor-pointer">
+          Switch Character
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // =========================================================================
+    // 1. MULTIPLAYER CLOUD CONNECTION SETUP
+    // =========================================================================
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'cat-mouse-chase-v002';
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+
+    async function initCloudBackend() {
+      try {
+        if (typeof __firebase_config === 'undefined') return;
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          const cred = await signInWithCustomToken(auth, __initial_auth_token);
+          currentUser = cred.user;
+        } else {
+          const cred = await signInAnonymously(auth);
+          currentUser = cred.user;
+        }
+      } catch (err) {
+        console.warn('Multiplayer connection setup warning:', err);
+      }
+    }
+
+    const Multiplayer = {
+      enabled: false,
+      roomCode: '',
+      unsubscribeRoom: null,
+      roomData: null,
+      lastSyncSent: 0,
+
+      generateRoomCode() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 5; i++) {
+          code += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return code;
+      },
+
+      getRoomRef(code) {
+        return doc(db, 'artifacts', appId, 'public', 'data', 'rooms', code);
+      },
+
+      async createRoom() {
+        showLobbyError('');
+        if (!db) await initCloudBackend();
+        if (!db || !currentUser) {
+          showLobbyError('Multiplayer server is unavailable in offline preview—try Solo vs AI!');
+          return;
+        }
+
+        const code = this.generateRoomCode();
+        const initialRoom = {
+          code,
+          hostId: currentUser.uid,
+          status: 'LOBBY',
+          roles: {
+            CAT: null,
+            MOUSE: null,
+            OWNER: null
+          },
+          entities: {
+            CAT: { x: 290, y: 350, angle: 0, milkBoostTimer: 0, scratchCooldown: 0, caughtByOwner: false },
+            MOUSE: { x: 560, y: 520, angle: 0, cheeseBoostTimer: 0, caughtByOwner: false, escapedHouse: false },
+            OWNER: { x: 1260, y: 560, angle: Math.PI / 2, hp: 100 }
+          },
+          cheeseCollected: [],
+          milkCollected: [],
+          trapsDeployed: false,
+          outcome: null,
+          updatedAt: Date.now()
+        };
+
+        try {
+          await setDoc(this.getRoomRef(code), initialRoom);
+          this.subscribeToRoom(code);
+        } catch (err) {
+          showLobbyError('Could not create room. Check connection and try again.');
+        }
+      },
+
+      async joinRoom(rawCode) {
+        showLobbyError('');
+        const code = (rawCode || '').trim().toUpperCase();
+        if (code.length < 4) {
+          showLobbyError('Please enter a valid 5-character room code.');
+          return;
+        }
+        if (!db) await initCloudBackend();
+        if (!db || !currentUser) {
+          showLobbyError('Multiplayer server is unavailable in offline preview—try Solo vs AI!');
+          return;
+        }
+
+        try {
+          const snap = await getDoc(this.getRoomRef(code));
+          if (!snap.exists()) {
+            showLobbyError(`Room "${code}" was not found.`);
+            return;
+          }
+          this.subscribeToRoom(code);
+        } catch (err) {
+          showLobbyError('Unable to join room. Please try again.');
+        }
+      },
+
+      subscribeToRoom(code) {
+        if (this.unsubscribeRoom) {
+          this.unsubscribeRoom();
+        }
+        this.roomCode = code;
+        this.enabled = true;
+
+        activeRoomBanner.classList.remove('hidden');
+        currentRoomCodeDisplay.textContent = code;
+        hudRoomBadge.classList.remove('hidden');
+        hudRoomBadge.textContent = `ROOM: ${code}`;
+
+        this.unsubscribeRoom = onSnapshot(
+          this.getRoomRef(code),
+          (snapshot) => {
+            if (!snapshot.exists()) return;
+            const data = snapshot.data();
+            this.roomData = data;
+            this.applyRoomSnapshot(data);
+          },
+          (error) => {
+            console.warn('Room sync error:', error);
+          }
+        );
+      },
+
+      async claimRoleAndStart(role) {
+        if (!this.enabled || !this.roomCode || !db || !currentUser) {
+          SoundFX.init();
+          startGame(role);
+          return;
+        }
+
+        const existingHolder = this.roomData?.roles?.[role];
+        if (existingHolder && existingHolder !== currentUser.uid) {
+          showLobbyError(`Another player already picked ${role}! Choose an open role.`);
+          return;
+        }
+
+        showLobbyError('');
+        const updatedRoles = { ...(this.roomData?.roles || { CAT: null, MOUSE: null, OWNER: null }) };
+        for (const r of ['CAT', 'MOUSE', 'OWNER']) {
+          if (updatedRoles[r] === currentUser.uid) updatedRoles[r] = null;
+        }
+        updatedRoles[role] = currentUser.uid;
+
+        try {
+          await updateDoc(this.getRoomRef(this.roomCode), {
+            roles: updatedRoles,
+            status: 'PLAYING',
+            outcome: null,
+            updatedAt: Date.now()
+          });
+        } catch (_) {}
+
+        SoundFX.init();
+        startGame(role);
+      },
+
+      async resetRoomForRematch() {
+        if (!this.enabled || !this.roomCode || !db) return;
+        try {
+          await updateDoc(this.getRoomRef(this.roomCode), {
+            status: 'PLAYING',
+            outcome: null,
+            cheeseCollected: [],
+            milkCollected: [],
+            trapsDeployed: false,
+            entities: {
+              CAT: { x: 290, y: 350, angle: 0, milkBoostTimer: 0, scratchCooldown: 0, caughtByOwner: false },
+              MOUSE: { x: 560, y: 520, angle: 0, cheeseBoostTimer: 0, caughtByOwner: false, escapedHouse: false },
+              OWNER: { x: 1260, y: 560, angle: Math.PI / 2, hp: 100 }
+            },
+            updatedAt: Date.now()
+          });
+        } catch (_) {}
+      },
+
+      isRoleHumanControlled(role) {
+        if (!this.enabled || !this.roomData || !this.roomData.roles) return false;
+        return Boolean(this.roomData.roles[role]);
+      },
+
+      isHost() {
+        if (!this.enabled || !this.roomData || !currentUser) return true;
+        return this.roomData.hostId === currentUser.uid;
+      },
+
+      applyRoomSnapshot(data) {
+        const roles = data.roles || {};
+        const myId = currentUser?.uid;
+
+        const updateCardBadge = (roleKey, badgeEl, labelEl, defaultBadge, defaultLabel) => {
+          const holder = roles[roleKey];
+          if (!holder) {
+            badgeEl.textContent = defaultBadge;
+            labelEl.textContent = defaultLabel;
+          } else if (holder === myId) {
+            badgeEl.textContent = 'YOU ✓';
+            labelEl.textContent = 'Resume as ' + roleKey;
+          } else {
+            badgeEl.textContent = 'PLAYER TAKEN';
+            labelEl.textContent = 'Taken by Friend';
+          }
+        };
+
+        updateCardBadge('CAT', catSlotBadge, catCardActionLabel, 'Hunter • [1]', 'Play as Cat →');
+        updateCardBadge('MOUSE', mouseSlotBadge, mouseCardActionLabel, 'Scurry • [2]', 'Play as Mouse →');
+        updateCardBadge('OWNER', ownerSlotBadge, ownerCardActionLabel, 'Caretaker • [3]', 'Play as Owner →');
+
+        if (GameState.isPlaying && data.entities) {
+          if (GameState.playerRole !== 'CAT' && roles.CAT && data.entities.CAT) {
+            cat.x += (data.entities.CAT.x - cat.x) * 0.45;
+            cat.y += (data.entities.CAT.y - cat.y) * 0.45;
+            cat.angle = data.entities.CAT.angle || 0;
+            GameState.milkBoostTimer = data.entities.CAT.milkBoostTimer || 0;
+            cat.scratchCooldown = data.entities.CAT.scratchCooldown || 0;
+            cat.caughtByOwner = Boolean(data.entities.CAT.caughtByOwner);
+          }
+          if (GameState.playerRole !== 'MOUSE' && roles.MOUSE && data.entities.MOUSE) {
+            mouse.x += (data.entities.MOUSE.x - mouse.x) * 0.45;
+            mouse.y += (data.entities.MOUSE.y - mouse.y) * 0.45;
+            mouse.angle = data.entities.MOUSE.angle || 0;
+            mouse.cheeseBoostTimer = data.entities.MOUSE.cheeseBoostTimer || 0;
+            mouse.caughtByOwner = Boolean(data.entities.MOUSE.caughtByOwner);
+            mouse.escapedHouse = Boolean(data.entities.MOUSE.escapedHouse);
+          }
+          if (GameState.playerRole !== 'OWNER' && roles.OWNER && data.entities.OWNER) {
+            owner.x += (data.entities.OWNER.x - owner.x) * 0.45;
+            owner.y += (data.entities.OWNER.y - owner.y) * 0.45;
+            owner.angle = data.entities.OWNER.angle || 0;
+            if (typeof data.entities.OWNER.hp === 'number') {
+              owner.hp = data.entities.OWNER.hp;
+            }
+          }
+
+          if (Array.isArray(data.cheeseCollected)) {
+            data.cheeseCollected.forEach((idx) => {
+              if (cheesePickups[idx]) cheesePickups[idx].active = false;
+            });
+          }
+          if (Array.isArray(data.milkCollected)) {
+            data.milkCollected.forEach((idx) => {
+              if (milkPickups[idx]) milkPickups[idx].active = false;
+            });
+          }
+          if (data.trapsDeployed && holeTraps.length === 0) {
+            deployOwnerHoleTraps();
+          }
+
+          if (GameState.playerRole === 'OWNER') {
+            updateOwnerHUD();
+          }
+        }
+
+        if (!GameState.isPlaying && !gameOverModal.classList.contains('hidden') && data.status === 'PLAYING' && !data.outcome) {
+          startGame(GameState.playerRole);
+        }
+
+        if (GameState.isPlaying && data.outcome && data.outcome.winnerRole) {
+          const isWin = data.outcome.winnerRole === GameState.playerRole ||
+            (data.outcome.winnerRole === 'CAT_AND_OWNER' && GameState.playerRole !== 'MOUSE');
+          triggerGameOver(isWin, data.outcome.title, data.outcome.description, true);
+        }
+      },
+
+      async pushLocalState() {
+        if (!this.enabled || !this.roomCode || !db || !GameState.isPlaying) return;
+        const now = performance.now();
+        if (now - this.lastSyncSent < 95) return;
+        this.lastSyncSent = now;
+
+        const payload = { updatedAt: Date.now() };
+        const role = GameState.playerRole;
+
+        if (role === 'CAT') {
+          payload['entities.CAT'] = {
+            x: Math.round(cat.x),
+            y: Math.round(cat.y),
+            angle: Number(cat.angle.toFixed(2)),
+            milkBoostTimer: Number(GameState.milkBoostTimer.toFixed(1)),
+            scratchCooldown: Number(cat.scratchCooldown.toFixed(1)),
+            caughtByOwner: cat.caughtByOwner
+          };
+        } else if (role === 'MOUSE') {
+          payload['entities.MOUSE'] = {
+            x: Math.round(mouse.x),
+            y: Math.round(mouse.y),
+            angle: Number(mouse.angle.toFixed(2)),
+            cheeseBoostTimer: Number(mouse.cheeseBoostTimer.toFixed(1)),
+            caughtByOwner: mouse.caughtByOwner,
+            escapedHouse: mouse.escapedHouse
+          };
+        } else if (role === 'OWNER') {
+          payload['entities.OWNER'] = {
+            x: Math.round(owner.x),
+            y: Math.round(owner.y),
+            angle: Number(owner.angle.toFixed(2)),
+            hp: owner.hp
+          };
+          payload['entities.CAT.scratchCooldown'] = Number(cat.scratchCooldown.toFixed(1));
+          payload['entities.CAT.caughtByOwner'] = cat.caughtByOwner;
+          payload['entities.MOUSE.caughtByOwner'] = mouse.caughtByOwner;
+        }
+
+        if (this.isHost()) {
+          if (!this.isRoleHumanControlled('CAT')) {
+            payload['entities.CAT'] = {
+              x: Math.round(cat.x),
+              y: Math.round(cat.y),
+              angle: Number(cat.angle.toFixed(2)),
+              milkBoostTimer: Number(GameState.milkBoostTimer.toFixed(1)),
+              scratchCooldown: Number(cat.scratchCooldown.toFixed(1)),
+              caughtByOwner: cat.caughtByOwner
+            };
+          }
+          if (!this.isRoleHumanControlled('MOUSE')) {
+            payload['entities.MOUSE'] = {
+              x: Math.round(mouse.x),
+              y: Math.round(mouse.y),
+              angle: Number(mouse.angle.toFixed(2)),
+              cheeseBoostTimer: Number(mouse.cheeseBoostTimer.toFixed(1)),
+              caughtByOwner: mouse.caughtByOwner,
+              escapedHouse: mouse.escapedHouse
+            };
+          }
+          if (!this.isRoleHumanControlled('OWNER')) {
+            payload['entities.OWNER'] = {
+              x: Math.round(owner.x),
+              y: Math.round(owner.y),
+              angle: Number(owner.angle.toFixed(2)),
+              hp: owner.hp
+            };
+          }
+        }
+
+        try {
+          await updateDoc(this.getRoomRef(this.roomCode), payload);
+        } catch (_) {}
+      },
+
+      async broadcastOutcome(winnerRole, title, description) {
+        if (!this.enabled || !this.roomCode || !db) return;
+        try {
+          await updateDoc(this.getRoomRef(this.roomCode), {
+            status: 'FINISHED',
+            outcome: { winnerRole, title, description },
+            updatedAt: Date.now()
+          });
+        } catch (_) {}
+      }
+    };
+
+    // =========================================================================
+    // 2. NOSTALGIC CHILL SOUND & MUSIC SYNTHESIZER (WEB AUDIO API)
+    // =========================================================================
+    const SoundFX = {
+      ctx: null,
+      bgmTimer: null,
+      stepCooldown: 0,
+      chordIndex: 0,
+
+      init() {
+        try {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+          this.startChillMusic();
+        } catch (_) {}
+      },
+
+      startChillMusic() {
+        if (this.bgmTimer) return;
+        // Warm nostalgic lo-fi electric piano progression: Fmaj7 -> Em7 -> Dm7 -> Cmaj9
+        const chords = [
+          [174.61, 220.00, 261.63, 329.63], // Fmaj7
+          [164.81, 196.00, 246.94, 293.66], // Em7
+          [146.83, 174.61, 220.00, 261.63], // Dm7
+          [130.81, 196.00, 246.94, 293.66]  // Cmaj9
+        ];
+
+        const playNextChord = () => {
+          if (!this.ctx || GameState.soundMuted) return;
+          try {
+            const now = this.ctx.currentTime;
+            const notes = chords[this.chordIndex % chords.length];
+            this.chordIndex++;
+
+            notes.forEach((freq, idx) => {
+              const osc = this.ctx.createOscillator();
+              const gain = this.ctx.createGain();
+              osc.type = idx === 0 ? 'sine' : 'triangle';
+              osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+
+              gain.gain.setValueAtTime(0.0001, now + idx * 0.09);
+              gain.gain.linearRampToValueAtTime(0.022, now + idx * 0.09 + 0.25);
+              gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.3);
+
+              osc.connect(gain);
+              gain.connect(this.ctx.destination);
+              osc.start(now + idx * 0.09);
+              osc.stop(now + 2.4);
+            });
+          } catch (_) {}
+        };
+
+        playNextChord();
+        this.bgmTimer = setInterval(playNextChord, 2400);
+      },
+
+      playTone(freq, duration = 0.12, type = 'sine', volume = 0.06, delay = 0) {
+        if (!this.ctx || GameState.soundMuted) return;
+        try {
+          const now = this.ctx.currentTime + delay;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(volume, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + duration + 0.02);
+        } catch (_) {}
+      },
+
+      playPump() {
+        this.playTone(440, 0.09, 'triangle', 0.05);
+        this.playTone(587.33, 0.09, 'triangle', 0.04, 0.04);
+      },
+
+      playStep(heavy = false) {
+        if (this.stepCooldown > 0) return;
+        this.stepCooldown = heavy ? 0.28 : 0.22;
+        this.playTone(heavy ? 110 : 210, 0.05, 'sine', 0.02);
+      },
+
+      playPickup(isMilk) {
+        if (isMilk) {
+          this.playTone(523.25, 0.12, 'sine', 0.07);
+          this.playTone(659.25, 0.14, 'sine', 0.07, 0.08);
+          this.playTone(783.99, 0.2, 'sine', 0.07, 0.16);
+        } else {
+          this.playTone(587.33, 0.1, 'triangle', 0.07);
+          this.playTone(880, 0.16, 'triangle', 0.07, 0.07);
+        }
+      },
+
+      playCatScratch() {
+        this.playTone(320, 0.14, 'sawtooth', 0.08);
+        this.playTone(190, 0.2, 'sawtooth', 0.08, 0.06);
+      },
+
+      playCatchPet() {
+        this.playTone(440, 0.12, 'triangle', 0.07);
+        this.playTone(660, 0.18, 'triangle', 0.07, 0.08);
+      },
+
+      playWin() {
+        this.playTone(523.25, 0.14, 'triangle', 0.08, 0);
+        this.playTone(659.25, 0.14, 'triangle', 0.08, 0.1);
+        this.playTone(783.99, 0.14, 'triangle', 0.08, 0.2);
+        this.playTone(1046.5, 0.35, 'triangle', 0.09, 0.3);
+      },
+
+      playLose() {
+        this.playTone(349.23, 0.18, 'sine', 0.07, 0);
+        this.playTone(311.13, 0.18, 'sine', 0.07, 0.14);
+        this.playTone(261.63, 0.35, 'sine', 0.08, 0.28);
+      }
+    };
+
+    // =========================================================================
+    // 3. CANVAS, CAMERA & GAME STATE
+    // =========================================================================
+    const canvasWrapper = document.getElementById('canvasWrapper');
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const ARENA = {
+      width: 2000,
+      height: 1400,
+      wallMargin: 40,
+      wallTop: 40
+    };
+
+    const Camera = {
+      x: 0,
+      y: 0
+    };
+
+    const GameState = {
+      isPlaying: false,
+      playerRole: 'CAT', // 'CAT' | 'MOUSE' | 'OWNER'
+      gameTime: 0,
+      speedBar: 0,
+      isSpeedActive: false,
+      milkBoostTimer: 0,
+      shakeTimer: 0,
+      shakeIntensity: 0,
+      soundMuted: false
+    };
+
+    const Input = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      boostHeld: false,
+      joystickX: 0,
+      joystickY: 0
+    };
+
+    // =========================================================================
+    // 4. CHARACTERS & WORLD ENTITIES
+    // =========================================================================
+    const cat = {
+      x: 320,
+      y: 320,
+      radius: 18,
+      vx: 0,
+      vy: 0,
+      angle: 0,
+      baseSpeed: 165,
+      sprintSpeed: 275,
+      scratchCooldown: 0,
+      scratchAnim: 0,
+      caughtByOwner: false,
+      tailPhase: 0
+    };
+
+    const mouse = {
+      x: 680,
+      y: 540,
+      radius: 14,
+      vx: 0,
+      vy: 0,
+      angle: 0,
+      baseSpeed: 135,
+      dashSpeed: 215,
+      stamina: 100,
+      cheeseBoostTimer: 0,
+      trapStunTimer: 0,
+      caughtByOwner: false,
+      escapedHouse: false,
+      tailPhase: 0
+    };
+
+    const owner = {
+      x: 760,
+      y: 230,
+      radius: 28,
+      vx: 0,
+      vy: 0,
+      angle: Math.PI / 2,
+      speed: 82,
+      playerBaseSpeed: 145,
+      playerLungeSpeed: 235,
+      stamina: 100,
+      hp: 100,
+      maxHp: 100,
+      hitFlashTimer: 0,
+      visionRange: 255,
+      visionHalfAngle: 0.45,
+      waypoints: [
+        { x: 760, y: 230 },
+        { x: 960, y: 560 },
+        { x: 1240, y: 560 },
+        { x: 1690, y: 280 },
+        { x: 1660, y: 980 },
+        { x: 1210, y: 580 },
+        { x: 730, y: 600 },
+        { x: 340, y: 220 }
+      ],
+      currentWaypoint: 1,
+      stepPhase: 0
+    };
+
+    const mouseHole = {
+      x: 1860,
+      y: 120,
+      radius: 26
+    };
+
+    let obstacles = [];
+    let cheesePickups = [];
+    let milkPickups = [];
+    let holeTraps = [];
+    let floatingTexts = [];
+    let particles = [];
+
+    // =========================================================================
+    // 5. DOM REFERENCES
+    // =========================================================================
+    const startOverlay = document.getElementById('startOverlay');
+    const modeSoloBtn = document.getElementById('modeSoloBtn');
+    const modeMultiBtn = document.getElementById('modeMultiBtn');
+    const multiplayerLobbyControls = document.getElementById('multiplayerLobbyControls');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const roomCodeInput = document.getElementById('roomCodeInput');
+    const joinRoomBtn = document.getElementById('joinRoomBtn');
+    const activeRoomBanner = document.getElementById('activeRoomBanner');
+    const currentRoomCodeDisplay = document.getElementById('currentRoomCodeDisplay');
+    const copyRoomCodeBtn = document.getElementById('copyRoomCodeBtn');
+    const lobbyErrorText = document.getElementById('lobbyErrorText');
+    const hudRoomBadge = document.getElementById('hudRoomBadge');
+
+    const catSlotBadge = document.getElementById('catSlotBadge');
+    const mouseSlotBadge = document.getElementById('mouseSlotBadge');
+    const ownerSlotBadge = document.getElementById('ownerSlotBadge');
+    const catCardActionLabel = document.getElementById('catCardActionLabel');
+    const mouseCardActionLabel = document.getElementById('mouseCardActionLabel');
+    const ownerCardActionLabel = document.getElementById('ownerCardActionLabel');
+
+    const chooseCatBtn = document.getElementById('chooseCatBtn');
+    const chooseMouseBtn = document.getElementById('chooseMouseBtn');
+    const chooseOwnerBtn = document.getElementById('chooseOwnerBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const changeRoleBtn = document.getElementById('changeRoleBtn');
+    const menuQuickBtn = document.getElementById('menuQuickBtn');
+    const gameOverModal = document.getElementById('gameOverModal');
+    const winEmoji = document.getElementById('winEmoji');
+    const winTitle = document.getElementById('winTitle');
+    const winDesc = document.getElementById('winDesc');
+    const hudTimer = document.getElementById('hudTimer');
+    const hudRoleEmoji = document.getElementById('hudRoleEmoji');
+    const hudRoleTitle = document.getElementById('hudRoleTitle');
+    const hudObjectiveText = document.getElementById('hudObjectiveText');
+    const ownerTargetsRow = document.getElementById('ownerTargetsRow');
+    const catCatchPill = document.getElementById('catCatchPill');
+    const mouseCatchPill = document.getElementById('mouseCatchPill');
+    const catScratchCooldownPill = document.getElementById('catScratchCooldownPill');
+    const ownerHealthPanel = document.getElementById('ownerHealthPanel');
+    const ownerHpText = document.getElementById('ownerHpText');
+    const ownerHpFill = document.getElementById('ownerHpFill');
+    const ownerHeartsDisplay = document.getElementById('ownerHeartsDisplay');
+    const speedBarTitle = document.getElementById('speedBarTitle');
+    const speedBarPercent = document.getElementById('speedBarPercent');
+    const speedBarFill = document.getElementById('speedBarFill');
+    const speedBarHint = document.getElementById('speedBarHint');
+    const pickupBoostBadge = document.getElementById('pickupBoostBadge');
+    const desktopBoostHint = document.getElementById('desktopBoostHint');
+    const audioMuteBtn = document.getElementById('audioMuteBtn');
+    const virtualJoystick = document.getElementById('virtualJoystick');
+    const joystickThumb = document.getElementById('joystickThumb');
+    const speedPumpBtn = document.getElementById('speedPumpBtn');
+
+    function showLobbyError(msg) {
+      if (!msg) {
+        lobbyErrorText.classList.add('hidden');
+        lobbyErrorText.textContent = '';
+      } else {
+        lobbyErrorText.classList.remove('hidden');
+        lobbyErrorText.textContent = msg;
+      }
+    }
+
+    // =========================================================================
+    // 6. WORLD & ROUND INITIALIZATION
+    // =========================================================================
+    function resizeCanvas() {
+      if (!canvasWrapper) return;
+      const rect = canvasWrapper.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+    }
+
+    function buildHouseLayout(role) {
+      obstacles = [
+        // Living Room (Left Wing)
+        { x: 210, y: 190, w: 230, h: 95, color: '#7c2d12', label: 'Plush Sofa', solidForMouse: true },
+        { x: 350, y: 420, w: 185, h: 105, color: '#92400e', label: 'Coffee Table', solidForMouse: false },
+        { x: 190, y: 760, w: 165, h: 135, color: '#78350f', label: 'Armchair', solidForMouse: true },
+        { x: 630, y: 780, w: 210, h: 110, color: '#92400e', label: 'Side Table', solidForMouse: false },
+        { x: 540, y: 200, w: 155, h: 90, color: '#854d0e', label: 'Bookshelf', solidForMouse: true },
+
+        // Dividing Wall between Living Room & Kitchen (with central open doorway y: 465..675)
+        { x: 1015, y: 44, w: 34, h: 421, color: '#44403c', label: '', solidForMouse: true },
+        { x: 1015, y: 675, w: 34, h: 681, color: '#44403c', label: '', solidForMouse: true },
+
+        // Kitchen & Dining Room (Right Wing)
+        { x: 1250, y: 260, w: 240, h: 120, color: '#92400e', label: 'Dining Table', solidForMouse: false },
+        { x: 1640, y: 460, w: 240, h: 95, color: '#57534e', label: 'Kitchen Island', solidForMouse: true },
+        { x: 1220, y: 860, w: 220, h: 115, color: '#92400e', label: 'Breakfast Table', solidForMouse: false },
+        { x: 1620, y: 920, w: 210, h: 140, color: '#57534e', label: 'Pantry Counter', solidForMouse: true }
+      ];
+
+      cheesePickups = [
+        { x: 560, y: 620, active: true },
+        { x: 1140, y: 310, active: true },
+        { x: 1480, y: 690, active: true },
+        { x: 1730, y: 330, active: true }
+      ];
+
+      milkPickups = [
+        { x: 260, y: 580, active: true },
+        { x: 890, y: 480, active: true },
+        { x: 1420, y: 510, active: true },
+        { x: 1520, y: 1120, active: true }
+      ];
+
+      holeTraps = [];
+
+      if (Multiplayer.enabled) {
+        cat.x = 290;
+        cat.y = 350;
+        mouse.x = 560;
+        mouse.y = 520;
+        mouseHole.x = 1860;
+        mouseHole.y = 115;
+        owner.x = 1260;
+        owner.y = 560;
+      } else if (role === 'CAT') {
+        // Mouse spawns right nearby in bottom-left Living Room; hole is far away in top-right Kitchen
+        cat.x = 290;
+        cat.y = 350;
+        mouse.x = 465;
+        mouse.y = 470;
+        mouseHole.x = 1880;
+        mouseHole.y = 105;
+        owner.x = 1260;
+        owner.y = 560;
+      } else if (role === 'MOUSE') {
+        // Original closer Mouse spawn and hole placement
+        cat.x = 320;
+        cat.y = 320;
+        mouse.x = 880;
+        mouse.y = 560;
+        mouseHole.x = 1820;
+        mouseHole.y = 135;
+        owner.x = 1350;
+        owner.y = 620;
+      } else {
+        // Owner mode
+        owner.x = 960;
+        owner.y = 570;
+        cat.x = 480;
+        cat.y = 360;
+        mouse.x = 1320;
+        mouse.y = 520;
+        mouseHole.x = 1860;
+        mouseHole.y = 115;
+      }
+    }
+
+    function deployOwnerHoleTraps() {
+      if (holeTraps.length >= 6) return;
+      const offsets = [
+        { dx: -115, dy: 25 },
+        { dx: -95, dy: 115 },
+        { dx: -15, dy: 135 },
+        { dx: 55, dy: 95 }
+      ];
+      for (const off of offsets) {
+        const tx = Math.max(80, Math.min(ARENA.width - 80, mouseHole.x + off.dx));
+        const ty = Math.max(85, Math.min(ARENA.height - 80, mouseHole.y + off.dy));
+        holeTraps.push({ x: tx, y: ty });
+      }
+      spawnFloatingText(mouseHole.x - 40, mouseHole.y + 55, '⚠️ Owner set perimeter traps near hole!', '#f87171');
+    }
+
+    function returnToMenu() {
+      GameState.isPlaying = false;
+      gameOverModal.classList.add('hidden');
+      startOverlay.classList.remove('hidden');
+    }
+
+    function triggerGameOver(isVictory, title, description, fromRemote = false) {
+      if (!GameState.isPlaying) return;
+      GameState.isPlaying = false;
+      winEmoji.textContent = isVictory ? '🏆' : '😿';
+      winTitle.textContent = title;
+      winTitle.className = isVictory
+        ? 'arcade-font text-3xl font-extrabold text-emerald-300'
+        : 'arcade-font text-3xl font-extrabold text-rose-400';
+      winDesc.textContent = description;
+      gameOverModal.classList.remove('hidden');
+
+      if (isVictory) {
+        SoundFX.playWin();
+      } else {
+        SoundFX.playLose();
+      }
+
+      if (!fromRemote && Multiplayer.enabled) {
+        const winnerRole = isVictory ? GameState.playerRole : (GameState.playerRole === 'CAT' ? 'MOUSE' : 'CAT');
+        Multiplayer.broadcastOutcome(winnerRole, title, description);
+      }
+    }
+
+    function startGame(role) {
+      GameState.playerRole = role;
+      GameState.isPlaying = true;
+      GameState.gameTime = 0;
+      GameState.speedBar = 0;
+      GameState.isSpeedActive = false;
+      GameState.milkBoostTimer = 0;
+      GameState.shakeTimer = 0;
+
+      cat.vx = 0;
+      cat.vy = 0;
+      cat.angle = 0;
+      cat.scratchCooldown = 0;
+      cat.scratchAnim = 0;
+      cat.caughtByOwner = false;
+
+      mouse.vx = 0;
+      mouse.vy = 0;
+      mouse.angle = 0;
+      mouse.stamina = 100;
+      mouse.cheeseBoostTimer = 0;
+      mouse.trapStunTimer = 0;
+      mouse.caughtByOwner = false;
+      mouse.escapedHouse = false;
+
+      owner.vx = 0;
+      owner.vy = 0;
+      owner.hp = owner.maxHp;
+      owner.stamina = 100;
+      owner.hitFlashTimer = 0;
+      owner.currentWaypoint = 1;
+
+      floatingTexts = [];
+      particles = [];
+
+      buildHouseLayout(role);
+      updateHUDForRole(role);
+
+      startOverlay.classList.add('hidden');
+      gameOverModal.classList.add('hidden');
+      resizeCanvas();
+      canvas.focus();
+    }
+
+    // =========================================================================
+    // 7. HUD & VISUAL HELPERS
+    // =========================================================================
+    function updateHUDForRole(role) {
+      ownerTargetsRow.classList.add('hidden');
+      ownerHealthPanel.classList.add('hidden');
+      pickupBoostBadge.classList.add('hidden');
+
+      if (role === 'CAT') {
+        hudRoleEmoji.textContent = '🐱';
+        hudRoleTitle.textContent = 'Playing as Cat';
+        hudObjectiveText.textContent = 'Pump your Fast Speed Bar to catch the Mouse! Avoid the Owner!';
+        speedBarTitle.textContent = '⚡ Fast Speed Bar';
+        speedBarHint.innerHTML = 'Tap/Hold <kbd class="bg-stone-700 text-amber-200 px-1.5 rounded">SPACE</kbd> to rev up speed!';
+        desktopBoostHint.innerHTML = 'Speed Up: <strong class="text-amber-200">Tap / Hold SPACE</strong>';
+        speedPumpBtn.textContent = '⚡ PUMP SPEED';
+      } else if (role === 'MOUSE') {
+        hudRoleEmoji.textContent = '🐭';
+        hudRoleTitle.textContent = 'Playing as Mouse';
+        hudObjectiveText.textContent = 'Scurry under tables and escape into the wall hole!';
+        speedBarTitle.textContent = '💨 Squeak-Dash Stamina';
+        speedBarHint.innerHTML = 'Hold <kbd class="bg-stone-700 text-amber-200 px-1.5 rounded">SPACE</kbd> to dash away!';
+        desktopBoostHint.innerHTML = 'Squeak-Dash: <strong class="text-amber-200">Hold SPACE</strong>';
+        speedPumpBtn.textContent = '💨 SQUEAK DASH';
+      } else {
+        hudRoleEmoji.textContent = '🏠';
+        hudRoleTitle.textContent = 'Playing as Owner';
+        hudObjectiveText.textContent = 'Catch the Cat before she escapes the house! Mouse escape is fine.';
+        ownerTargetsRow.classList.remove('hidden');
+        ownerHealthPanel.classList.remove('hidden');
+        speedBarTitle.textContent = '👟 Owner Lunge Boost';
+        speedBarHint.innerHTML = 'Hold <kbd class="bg-stone-700 text-amber-200 px-1.5 rounded">SPACE</kbd> for a lunge speed boost!';
+        desktopBoostHint.innerHTML = 'Lunge Boost: <strong class="text-amber-200">Hold SPACE</strong>';
+        speedPumpBtn.textContent = '👟 LUNGE BOOST';
+        updateOwnerHUD();
+      }
+    }
+
+    function updateOwnerHUD() {
+      const clampedHp = Math.max(0, Math.min(owner.maxHp, owner.hp));
+      ownerHpText.textContent = `${clampedHp} / ${owner.maxHp} HP`;
+      ownerHpFill.style.width = `${(clampedHp / owner.maxHp) * 100}%`;
+
+      const heartsLeft = Math.ceil(clampedHp / 25);
+      ownerHeartsDisplay.textContent = '❤️'.repeat(heartsLeft) + '🖤'.repeat(Math.max(0, 4 - heartsLeft));
+
+      if (cat.caughtByOwner) {
+        catCatchPill.textContent = '🐱 Cat: Caught ✓';
+        catCatchPill.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-200 border border-emerald-400/50';
+        catScratchCooldownPill.textContent = '🐾 Cat: Safe in Timeout';
+      } else {
+        catCatchPill.textContent = '🐱 Cat: Free';
+        catCatchPill.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-200 border border-orange-400/40';
+        if (cat.scratchCooldown > 0) {
+          catScratchCooldownPill.textContent = `⏳ Scratch CD: ${cat.scratchCooldown.toFixed(1)}s`;
+          catScratchCooldownPill.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/25 text-amber-200 border border-amber-300/50';
+        } else {
+          catScratchCooldownPill.textContent = '🐾 Cat Claws: Ready!';
+          catScratchCooldownPill.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-400/40';
+        }
+      }
+
+      if (mouse.caughtByOwner) {
+        mouseCatchPill.textContent = '🐭 Mouse: Caught ✓';
+        mouseCatchPill.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-200 border border-emerald-400/50';
+      } else if (mouse.escapedHouse) {
+        mouseCatchPill.textContent = '🐭 Mouse: Escaped (Safe)';
+        mouseCatchPill.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-200 border border-sky-400/40';
+      } else {
+        mouseCatchPill.textContent = '🐭 Mouse: Scurrying';
+        mouseCatchPill.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-200 border border-sky-400/40';
+      }
+    }
+
+    function updateSpeedBarUI(percent, isActive) {
+      const clamped = Math.round(Math.max(0, Math.min(100, percent)));
+      speedBarPercent.textContent = `${clamped}%`;
+      speedBarFill.style.width = `${clamped}%`;
+      if (isActive && clamped > 20) {
+        speedBarFill.classList.add('speed-bar-active');
+      } else {
+        speedBarFill.classList.remove('speed-bar-active');
+      }
+    }
+
+    function triggerSpeedPump() {
+      if (!GameState.isPlaying) return;
+      if (GameState.playerRole === 'CAT') {
+        GameState.speedBar = Math.min(100, GameState.speedBar + 26);
+        GameState.isSpeedActive = true;
+        SoundFX.playPump();
+        spawnParticle(cat.x, cat.y, '#fbbf24', 65, 4, 0.28);
+      } else {
+        Input.boostHeld = true;
+        setTimeout(() => { Input.boostHeld = false; }, 220);
+      }
+    }
+
+    function toggleAudioMute() {
+      GameState.soundMuted = !GameState.soundMuted;
+      audioMuteBtn.textContent = GameState.soundMuted ? '🔇 Muted' : '🎵 Chill On';
+    }
+
+    function spawnFloatingText(x, y, text, color = '#fde047') {
+      floatingTexts.push({ x, y, text, color, life: 1.5, maxLife: 1.5 });
+    }
+
+    function spawnParticle(x, y, color, speed = 80, radius = 4, life = 0.4) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = (0.4 + Math.random() * 0.6) * speed;
+      particles.push({
+        x, y,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd,
+        color,
+        radius,
+        life,
+        maxLife: life
+      });
+    }
+
+    // =========================================================================
+    // 8. PHYSICS & COLLISION HELPERS
+    // =========================================================================
+    function circleRectCollision(cx, cy, cr, rect) {
+      const closestX = Math.max(rect.x, Math.min(cx, rect.x + rect.w));
+      const closestY = Math.max(rect.y, Math.min(cy, rect.y + rect.h));
+      const dx = cx - closestX;
+      const dy = cy - closestY;
+      const distSq = dx * dx + dy * dy;
+      if (distSq < cr * cr) {
+        const dist = Math.sqrt(distSq) || 0.001;
+        return {
+          collided: true,
+          nx: dx / dist,
+          ny: dy / dist,
+          overlap: cr - dist
+        };
+      }
+      return { collided: false };
+    }
+
+    function resolveEntityEnvironment(entity, isCatOrOwner) {
+      const minX = ARENA.wallMargin + entity.radius;
+      const maxX = ARENA.width - ARENA.wallMargin - entity.radius;
+      const minY = ARENA.wallTop + entity.radius;
+      const maxY = ARENA.height - ARENA.wallMargin - entity.radius;
+
+      // In Owner mode, allow the AI Cat to slip toward the outer edges to escape the house
+      if (!(GameState.playerRole === 'OWNER' && entity === cat)) {
+        if (entity.x < minX) entity.x = minX;
+        if (entity.x > maxX) entity.x = maxX;
+        if (entity.y < minY) entity.y = minY;
+        if (entity.y > maxY) entity.y = maxY;
+      }
+
+      for (const obs of obstacles) {
+        if (!isCatOrOwner && !obs.solidForMouse) continue;
+        const res = circleRectCollision(entity.x, entity.y, entity.radius, obs);
+        if (res.collided) {
+          entity.x += res.nx * res.overlap;
+          entity.y += res.ny * res.overlap;
+        }
+      }
+    }
+
+    // =========================================================================
+    // 9. UPDATE LOOPS (PLAYER & AI)
+    // =========================================================================
+    function update(dt) {
+      if (!GameState.isPlaying) return;
+
+      GameState.gameTime += dt;
+      const mins = String(Math.floor(GameState.gameTime / 60)).padStart(2, '0');
+      const secs = String(Math.floor(GameState.gameTime % 60)).padStart(2, '0');
+      hudTimer.textContent = `${mins}:${secs}`;
+
+      if (SoundFX.stepCooldown > 0) SoundFX.stepCooldown -= dt;
+      if (GameState.shakeTimer > 0) GameState.shakeTimer -= dt;
+      if (GameState.milkBoostTimer > 0) GameState.milkBoostTimer = Math.max(0, GameState.milkBoostTimer - dt);
+      if (mouse.cheeseBoostTimer > 0) mouse.cheeseBoostTimer = Math.max(0, mouse.cheeseBoostTimer - dt);
+      if (mouse.trapStunTimer > 0) mouse.trapStunTimer = Math.max(0, mouse.trapStunTimer - dt);
+      if (owner.hitFlashTimer > 0) owner.hitFlashTimer = Math.max(0, owner.hitFlashTimer - dt);
+      if (cat.scratchAnim > 0) cat.scratchAnim = Math.max(0, cat.scratchAnim - dt);
+
+      if (cat.scratchCooldown > 0) {
+        cat.scratchCooldown = Math.max(0, cat.scratchCooldown - dt);
+        if (GameState.playerRole === 'OWNER') updateOwnerHUD();
+      }
+
+      let moveX = Input.joystickX;
+      let moveY = Input.joystickY;
+      if (Input.up) moveY -= 1;
+      if (Input.down) moveY += 1;
+      if (Input.left) moveX -= 1;
+      if (Input.right) moveX += 1;
+
+      const moveLen = Math.hypot(moveX, moveY);
+      const isMoving = moveLen > 0.05;
+      if (moveLen > 1) {
+        moveX /= moveLen;
+        moveY /= moveLen;
+      }
+
+      // Update characters based on selected role (skipping AI for human-controlled multiplayer roles)
+      if (GameState.playerRole === 'CAT') {
+        updatePlayerCat(dt, moveX, moveY, isMoving);
+        if (!Multiplayer.isRoleHumanControlled('MOUSE')) updateAIMouse(dt);
+        if (!Multiplayer.isRoleHumanControlled('OWNER')) updatePatrolOwner(dt);
+      } else if (GameState.playerRole === 'MOUSE') {
+        updatePlayerMouse(dt, moveX, moveY, isMoving);
+        if (!Multiplayer.isRoleHumanControlled('CAT')) updateHunterAICat(dt);
+        if (!Multiplayer.isRoleHumanControlled('OWNER')) updatePatrolOwner(dt);
+      } else {
+        updatePlayerOwner(dt, moveX, moveY, isMoving);
+        if (!Multiplayer.isRoleHumanControlled('CAT')) updateEvasiveAICat(dt);
+        if (!Multiplayer.isRoleHumanControlled('MOUSE')) updateEvasiveAIMouse(dt);
+      }
+
+      checkPickupsAndTraps();
+      updateParticlesAndText(dt);
+      updateCamera(dt);
+      checkGameConditions();
+
+      if (Multiplayer.enabled) {
+        Multiplayer.pushLocalState();
+      }
+    }
+
+    function updatePlayerCat(dt, moveX, moveY, isMoving) {
+      if (Input.boostHeld) {
+        GameState.speedBar = Math.min(100, GameState.speedBar + 58 * dt);
+      } else {
+        GameState.speedBar = Math.max(0, GameState.speedBar - 26 * dt);
+      }
+
+      if (GameState.milkBoostTimer > 0) {
+        GameState.speedBar = 100;
+        pickupBoostBadge.classList.remove('hidden');
+        pickupBoostBadge.textContent = `🥛 Milk Boost: ${GameState.milkBoostTimer.toFixed(1)}s`;
+      } else {
+        pickupBoostBadge.classList.add('hidden');
+      }
+
+      const speedFactor = GameState.speedBar / 100;
+      const bonus = GameState.milkBoostTimer > 0 ? 55 : 0;
+      const currentSpeed = cat.baseSpeed + (cat.sprintSpeed - cat.baseSpeed) * speedFactor + bonus;
+
+      cat.vx = moveX * currentSpeed;
+      cat.vy = moveY * currentSpeed;
+      cat.x += cat.vx * dt;
+      cat.y += cat.vy * dt;
+
+      if (isMoving) {
+        cat.angle = Math.atan2(moveY, moveX);
+        cat.tailPhase += dt * (8 + speedFactor * 8);
+        SoundFX.playStep(false);
+        if (speedFactor > 0.65 && Math.random() < 0.35) {
+          spawnParticle(cat.x, cat.y, '#fbbf24', 45, 3, 0.22);
+        }
+      }
+
+      resolveEntityEnvironment(cat, true);
+      updateSpeedBarUI(GameState.speedBar, speedFactor > 0.3 || GameState.milkBoostTimer > 0);
+    }
+
+    function updatePlayerMouse(dt, moveX, moveY, isMoving) {
+      let isDashing = false;
+      if (Input.boostHeld && isMoving && mouse.stamina > 5) {
+        isDashing = true;
+        mouse.stamina = Math.max(0, mouse.stamina - 42 * dt);
+      } else {
+        mouse.stamina = Math.min(100, mouse.stamina + 28 * dt);
+      }
+
+      if (mouse.cheeseBoostTimer > 0) {
+        pickupBoostBadge.classList.remove('hidden');
+        pickupBoostBadge.textContent = `🧀 Cheese Boost: ${mouse.cheeseBoostTimer.toFixed(1)}s`;
+      } else {
+        pickupBoostBadge.classList.add('hidden');
+      }
+
+      let currentSpeed = isDashing ? mouse.dashSpeed : mouse.baseSpeed;
+      if (mouse.cheeseBoostTimer > 0) currentSpeed += 65;
+      if (mouse.trapStunTimer > 0) currentSpeed *= 0.55;
+
+      mouse.vx = moveX * currentSpeed;
+      mouse.vy = moveY * currentSpeed;
+      mouse.x += mouse.vx * dt;
+      mouse.y += mouse.vy * dt;
+
+      if (isMoving) {
+        mouse.angle = Math.atan2(moveY, moveX);
+        mouse.tailPhase += dt * 13;
+        if ((isDashing || mouse.cheeseBoostTimer > 0) && Math.random() < 0.35) {
+          spawnParticle(mouse.x, mouse.y, '#38bdf8', 40, 3, 0.22);
+        }
+      }
+
+      resolveEntityEnvironment(mouse, false);
+      updateSpeedBarUI(mouse.stamina, isDashing || mouse.cheeseBoostTimer > 0);
+    }
+
+    function updatePlayerOwner(dt, moveX, moveY, isMoving) {
+      let isLungeActive = false;
+      if (Input.boostHeld && isMoving && owner.stamina > 5) {
+        isLungeActive = true;
+        owner.stamina = Math.max(0, owner.stamina - 38 * dt);
+        if (Math.random() < 0.3) {
+          spawnParticle(owner.x, owner.y + 8, '#fda4af', 45, 3.5, 0.25);
+        }
+      } else {
+        owner.stamina = Math.min(100, owner.stamina + 26 * dt);
+      }
+
+      const currentSpeed = isLungeActive ? owner.playerLungeSpeed : owner.playerBaseSpeed;
+      owner.vx = moveX * currentSpeed;
+      owner.vy = moveY * currentSpeed;
+      owner.x += owner.vx * dt;
+      owner.y += owner.vy * dt;
+
+      if (isMoving) {
+        owner.angle = Math.atan2(moveY, moveX);
+        owner.stepPhase += dt * (isLungeActive ? 11.5 : 7.5);
+        SoundFX.playStep(true);
+      }
+
+      resolveEntityEnvironment(owner, true);
+      updateSpeedBarUI(owner.stamina, isLungeActive);
+    }
+
+    function updateAIMouse(dt) {
+      let goalX = mouseHole.x;
+      let goalY = mouseHole.y + 16;
+
+      for (const c of cheesePickups) {
+        if (!c.active) continue;
+        if (Math.hypot(c.x - mouse.x, c.y - mouse.y) < 230 && Math.hypot(c.x - cat.x, c.y - cat.y) > 160) {
+          goalX = c.x;
+          goalY = c.y;
+          break;
+        }
+      }
+
+      if (mouse.x < 1015 && goalX > 1050 && (mouse.y < 475 || mouse.y > 665)) {
+        goalX = 1032;
+        goalY = 570;
+      }
+
+      let dirX = goalX - mouse.x;
+      let dirY = goalY - mouse.y;
+      const distGoal = Math.hypot(dirX, dirY) || 1;
+      dirX /= distGoal;
+      dirY /= distGoal;
+
+      const fromCatX = mouse.x - cat.x;
+      const fromCatY = mouse.y - cat.y;
+      const distCat = Math.hypot(fromCatX, fromCatY) || 1;
+      if (distCat < 290) {
+        const panic = (290 - distCat) / 140;
+        dirX += (fromCatX / distCat) * panic * 1.6;
+        dirY += (fromCatY / distCat) * panic * 1.6;
+      }
+
+      for (const t of holeTraps) {
+        const dx = mouse.x - t.x;
+        const dy = mouse.y - t.y;
+        const d = Math.hypot(dx, dy) || 1;
+        if (d < 55) {
+          dirX += (dx / d) * 1.5;
+          dirY += (dy / d) * 1.5;
+        }
+      }
+
+      const norm = Math.hypot(dirX, dirY) || 1;
+      dirX /= norm;
+      dirY /= norm;
+
+      let spd = 128;
+      if (mouse.cheeseBoostTimer > 0) spd = 195;
+      if (mouse.trapStunTimer > 0) spd = 75;
+
+      mouse.x += dirX * spd * dt;
+      mouse.y += dirY * spd * dt;
+      mouse.angle = Math.atan2(dirY, dirX);
+      mouse.tailPhase += dt * 11;
+      resolveEntityEnvironment(mouse, false);
+    }
+
+    function updateHunterAICat(dt) {
+      let goalX = mouse.x;
+      let goalY = mouse.y;
+
+      if ((cat.x < 1015 && goalX > 1050) || (cat.x > 1050 && goalX < 1015)) {
+        if (cat.y < 475 || cat.y > 665) {
+          goalX = 1032;
+          goalY = 570;
+        }
+      }
+
+      let dirX = goalX - cat.x;
+      let dirY = goalY - cat.y;
+      const dist = Math.hypot(dirX, dirY) || 1;
+      dirX /= dist;
+      dirY /= dist;
+
+      const fromOwnerX = cat.x - owner.x;
+      const fromOwnerY = cat.y - owner.y;
+      const distOwner = Math.hypot(fromOwnerX, fromOwnerY) || 1;
+      if (distOwner < 260) {
+        dirX += (fromOwnerX / distOwner) * 1.4;
+        dirY += (fromOwnerY / distOwner) * 1.4;
+      }
+
+      const norm = Math.hypot(dirX, dirY) || 1;
+      dirX /= norm;
+      dirY /= norm;
+
+      const spd = GameState.milkBoostTimer > 0 ? 225 : 162;
+      cat.x += dirX * spd * dt;
+      cat.y += dirY * spd * dt;
+      cat.angle = Math.atan2(dirY, dirX);
+      cat.tailPhase += dt * 9;
+      resolveEntityEnvironment(cat, true);
+    }
+
+    function updateEvasiveAICat(dt) {
+      if (cat.caughtByOwner) {
+        cat.x = 240;
+        cat.y = 1240;
+        cat.tailPhase += dt * 3;
+        return;
+      }
+
+      const exits = [
+        { x: 30, y: 570 },
+        { x: 1970, y: 570 },
+        { x: 1032, y: 30 },
+        { x: 1032, y: 1370 }
+      ];
+      let bestExit = exits[0];
+      let bestScore = -Infinity;
+      for (const ex of exits) {
+        const dCat = Math.hypot(ex.x - cat.x, ex.y - cat.y);
+        const dOwner = Math.hypot(ex.x - owner.x, ex.y - owner.y);
+        const score = dOwner * 1.3 - dCat;
+        if (score > bestScore) {
+          bestScore = score;
+          bestExit = ex;
+        }
+      }
+
+      let goalX = bestExit.x;
+      let goalY = bestExit.y;
+      if ((cat.x < 1015 && goalX > 1050) || (cat.x > 1050 && goalX < 1015)) {
+        if (cat.y < 475 || cat.y > 665) {
+          goalX = 1032;
+          goalY = 570;
+        }
+      }
+
+      let dirX = goalX - cat.x;
+      let dirY = goalY - cat.y;
+      const distGoal = Math.hypot(dirX, dirY) || 1;
+      dirX /= distGoal;
+      dirY /= distGoal;
+
+      const fromOwnerX = cat.x - owner.x;
+      const fromOwnerY = cat.y - owner.y;
+      const distOwner = Math.hypot(fromOwnerX, fromOwnerY) || 1;
+
+      if (distOwner < 280) {
+        const evade = (280 - distOwner) / 130;
+        dirX += (fromOwnerX / distOwner) * evade * 1.5;
+        dirY += (fromOwnerY / distOwner) * evade * 1.5;
+      }
+
+      const norm = Math.hypot(dirX, dirY) || 1;
+      dirX /= norm;
+      dirY /= norm;
+
+      const spd = GameState.milkBoostTimer > 0 ? 210 : 152;
+      cat.x += dirX * spd * dt;
+      cat.y += dirY * spd * dt;
+      cat.angle = Math.atan2(dirY, dirX);
+      cat.tailPhase += dt * 9;
+      resolveEntityEnvironment(cat, true);
+    }
+
+    function updateEvasiveAIMouse(dt) {
+      if (mouse.escapedHouse) return;
+      if (mouse.caughtByOwner) {
+        mouse.x = 270;
+        mouse.y = 1210;
+        mouse.tailPhase += dt * 3;
+        return;
+      }
+
+      let goalX = mouseHole.x;
+      let goalY = mouseHole.y + 18;
+      if (mouse.x < 1015 && goalX > 1050 && (mouse.y < 475 || mouse.y > 665)) {
+        goalX = 1032;
+        goalY = 570;
+      }
+
+      let dirX = goalX - mouse.x;
+      let dirY = goalY - mouse.y;
+      const distGoal = Math.hypot(dirX, dirY) || 1;
+      dirX /= distGoal;
+      dirY /= distGoal;
+
+      const fromOwnerX = mouse.x - owner.x;
+      const fromOwnerY = mouse.y - owner.y;
+      const distOwner = Math.hypot(fromOwnerX, fromOwnerY) || 1;
+      if (distOwner < 290) {
+        dirX += (fromOwnerX / distOwner) * 1.4;
+        dirY += (fromOwnerY / distOwner) * 1.4;
+      }
+
+      const norm = Math.hypot(dirX, dirY) || 1;
+      dirX /= norm;
+      dirY /= norm;
+
+      const spd = mouse.cheeseBoostTimer > 0 ? 175 : 112;
+      mouse.x += dirX * spd * dt;
+      mouse.y += dirY * spd * dt;
+      mouse.angle = Math.atan2(dirY, dirX);
+      mouse.tailPhase += dt * 9;
+      resolveEntityEnvironment(mouse, false);
+    }
+
+    function updatePatrolOwner(dt) {
+      const target = owner.waypoints[owner.currentWaypoint];
+      const dx = target.x - owner.x;
+      const dy = target.y - owner.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist < 18) {
+        owner.currentWaypoint = (owner.currentWaypoint + 1) % owner.waypoints.length;
+      } else {
+        const dirX = dx / dist;
+        const dirY = dy / dist;
+        owner.x += dirX * owner.speed * dt;
+        owner.y += dirY * owner.speed * dt;
+        owner.angle = Math.atan2(dirY, dirX);
+        owner.stepPhase += dt * 5.5;
+      }
+      resolveEntityEnvironment(owner, true);
+    }
+
+    function checkPickupsAndTraps() {
+      cheesePickups.forEach((c) => {
+        if (!c.active) return;
+        if (Math.hypot(mouse.x - c.x, mouse.y - c.y) < mouse.radius + 16) {
+          c.active = false;
+          mouse.cheeseBoostTimer = 2.0;
+          SoundFX.playPickup(false);
+          spawnFloatingText(mouse.x, mouse.y - 24, '🧀 +2.0s Speed Boost!', '#fde047');
+          deployOwnerHoleTraps();
+          if (Multiplayer.enabled && db && Multiplayer.roomCode) {
+            const collected = cheesePickups.map((item, i) => (!item.active ? i : -1)).filter((i) => i >= 0);
+            updateDoc(Multiplayer.getRoomRef(Multiplayer.roomCode), {
+              cheeseCollected: collected,
+              trapsDeployed: true
+            }).catch(() => {});
+          }
+        }
+      });
+
+      milkPickups.forEach((m) => {
+        if (!m.active) return;
+        if (Math.hypot(cat.x - m.x, cat.y - m.y) < cat.radius + 18) {
+          m.active = false;
+          GameState.milkBoostTimer = 4.0;
+          SoundFX.playPickup(true);
+          spawnFloatingText(cat.x, cat.y - 24, '🥛 +4.0s Milk Boost!', '#f8fafc');
+          if (Multiplayer.enabled && db && Multiplayer.roomCode) {
+            const collected = milkPickups.map((item, i) => (!item.active ? i : -1)).filter((i) => i >= 0);
+            updateDoc(Multiplayer.getRoomRef(Multiplayer.roomCode), {
+              milkCollected: collected
+            }).catch(() => {});
+          }
+        }
+      });
+
+      for (const t of holeTraps) {
+        if (Math.hypot(mouse.x - t.x, mouse.y - t.y) < mouse.radius + 10 && mouse.trapStunTimer <= 0) {
+          mouse.trapStunTimer = 0.85;
+          spawnFloatingText(mouse.x, mouse.y - 20, '⚡ Trap Slow!', '#f87171');
+        }
+      }
+    }
+
+    function checkGameConditions() {
+      // 1. OWNER PLAYABLE MODE
+      if (GameState.playerRole === 'OWNER') {
+        if (!mouse.escapedHouse && !mouse.caughtByOwner) {
+          if (Math.hypot(mouse.x - mouseHole.x, mouse.y - mouseHole.y) < mouseHole.radius + 8) {
+            mouse.escapedHouse = true;
+            spawnFloatingText(mouseHole.x, mouseHole.y - 20, '🐭 Mouse escaped (Safe!)', '#38bdf8');
+            updateOwnerHUD();
+          }
+        }
+
+        if (!mouse.escapedHouse && !mouse.caughtByOwner) {
+          if (Math.hypot(owner.x - mouse.x, owner.y - mouse.y) < owner.radius + mouse.radius + 6) {
+            mouse.caughtByOwner = true;
+            SoundFX.playCatchPet();
+            spawnFloatingText(mouse.x, mouse.y - 24, '🐭 MOUSE CAUGHT!', '#38bdf8');
+            updateOwnerHUD();
+          }
+        }
+
+        if (!cat.caughtByOwner) {
+          const dx = owner.x - cat.x;
+          const dy = owner.y - cat.y;
+          const dist = Math.hypot(dx, dy);
+
+          if (cat.scratchCooldown <= 0 && owner.hitFlashTimer <= 0 && dist < owner.radius + cat.radius + 14) {
+            cat.scratchCooldown = 3.0;
+            cat.scratchAnim = 0.45;
+            owner.hp = Math.max(0, owner.hp - 25);
+            owner.hitFlashTimer = 0.65;
+            GameState.shakeTimer = 0.3;
+            GameState.shakeIntensity = 9;
+            SoundFX.playCatScratch();
+
+            const nx = dx / (dist || 1);
+            const ny = dy / (dist || 1);
+            owner.x += nx * 24;
+            owner.y += ny * 24;
+            resolveEntityEnvironment(owner, true);
+
+            spawnFloatingText(owner.x, owner.y - 34, '-25 HP! SCRATCH! (3s CD)', '#f43f5e');
+            updateOwnerHUD();
+
+            if (owner.hp <= 0) {
+              triggerGameOver(false, 'Scratched Too Many Times!', 'The feisty cat depleted your Health Bar before you could catch her.');
+              return;
+            }
+          } else if (cat.scratchCooldown > 0 && dist < owner.radius + cat.radius + 6) {
+            cat.caughtByOwner = true;
+            SoundFX.playCatchPet();
+            spawnFloatingText(cat.x, cat.y - 30, '🐱 CAT CAUGHT!', '#fb923c');
+            updateOwnerHUD();
+          }
+        }
+
+        if (!cat.caughtByOwner && (cat.x <= 40 || cat.x >= ARENA.width - 40 || cat.y <= 40 || cat.y >= ARENA.height - 40)) {
+          triggerGameOver(false, 'The Cat Escaped the House!', 'The cat dashed out of the house into the yard!');
+          return;
+        }
+
+        if (cat.caughtByOwner) {
+          triggerGameOver(true, 'Cat Caught! Victory!', 'You caught the mischievous cat! (The mouse got away into the wall hole, which is totally fine!)');
+        }
+        return;
+      }
+
+      // 2. CAT & MOUSE MODES
+      if (Math.hypot(cat.x - mouse.x, cat.y - mouse.y) < cat.radius + mouse.radius + 4) {
+        if (GameState.playerRole === 'CAT') {
+          triggerGameOver(true, 'You Caught the Mouse!', 'Lightning fast paws! You caught the mouse before he reached the wall hole.');
+        } else {
+          triggerGameOver(false, 'Caught by the Cat!', 'The cat pounced on you before you could reach the wall hole!');
+        }
+        return;
+      }
+
+      if (Math.hypot(mouse.x - mouseHole.x, mouse.y - mouseHole.y) < mouseHole.radius + 6) {
+        if (GameState.playerRole === 'MOUSE') {
+          triggerGameOver(true, 'Escaped into the Wall Hole!', 'Safe and sound! You outsmarted the cat and reached your cozy hole.');
+        } else {
+          triggerGameOver(false, 'The Mouse Escaped!', 'The mouse slipped into the wall hole! Pump your Fast Speed Bar faster next time.');
+        }
+        return;
+      }
+
+      if (GameState.playerRole === 'CAT') {
+        const dx = cat.x - owner.x;
+        const dy = cat.y - owner.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < owner.visionRange) {
+          const angleToCat = Math.atan2(dy, dx);
+          let diff = angleToCat - owner.angle;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          if (Math.abs(diff) < owner.visionHalfAngle) {
+            triggerGameOver(false, 'Scolded by Your Owner!', '"Bad kitty! No chasing mice in the living room!" Stay out of the Owner\'s red spotlight.');
+          }
+        }
+      }
+    }
+
+    function updateParticlesAndText(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.y -= 28 * dt;
+        ft.life -= dt;
+        if (ft.life <= 0) floatingTexts.splice(i, 1);
+      }
+    }
+
+    function updateCamera(dt) {
+      const targetEntity = GameState.playerRole === 'CAT' ? cat : (GameState.playerRole === 'MOUSE' ? mouse : owner);
+      const desiredX = Math.max(0, Math.min(ARENA.width - canvas.width, targetEntity.x - canvas.width / 2));
+      const desiredY = Math.max(0, Math.min(ARENA.height - canvas.height, targetEntity.y - canvas.height / 2));
+      const lerp = Math.min(1, dt * 7.5);
+      Camera.x += (desiredX - Camera.x) * lerp;
+      Camera.y += (desiredY - Camera.y) * lerp;
+    }
+
+    // =========================================================================
+    // 10. RENDERING
+    // =========================================================================
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      let shakeX = 0;
+      let shakeY = 0;
+      if (GameState.shakeTimer > 0) {
+        shakeX = (Math.random() - 0.5) * GameState.shakeIntensity * 2;
+        shakeY = (Math.random() - 0.5) * GameState.shakeIntensity * 2;
+      }
+      ctx.translate(-Camera.x + shakeX, -Camera.y + shakeY);
+
+      drawHouseEnvironment();
+      drawOwnerVisionCone();
+      drawParticles();
+      drawMouse();
+      drawCat();
+      drawOwner();
+      drawFloatingTexts();
+
+      ctx.restore();
+
+      drawOffscreenIndicators();
+    }
+
+    function drawHouseEnvironment() {
+      ctx.fillStyle = '#d9b99b';
+      ctx.fillRect(0, 0, ARENA.width, ARENA.height);
+
+      ctx.strokeStyle = '#c49e7b';
+      ctx.lineWidth = 1.5;
+      for (let x = 0; x < ARENA.width; x += 64) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, ARENA.height);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#292524';
+      ctx.lineWidth = 44;
+      ctx.strokeRect(22, 22, ARENA.width - 44, ARENA.height - 44);
+
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.roundRect(140, 140, 780, 560, 24);
+      ctx.fill();
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      ctx.fillStyle = '#292524';
+      ctx.beginPath();
+      ctx.roundRect(1080, 140, 820, 1080, 24);
+      ctx.fill();
+      ctx.strokeStyle = '#44403c';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.font = '800 32px Fredoka, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('LIVING ROOM', 175, 190);
+      ctx.fillText('KITCHEN & DINING', 1120, 190);
+
+      for (const obs of obstacles) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.3)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 5;
+
+        ctx.fillStyle = obs.color;
+        ctx.beginPath();
+        ctx.roundRect(obs.x, obs.y, obs.w, obs.h, 12);
+        ctx.fill();
+        ctx.strokeStyle = '#1c1917';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        if (obs.label) {
+          ctx.fillStyle = 'rgba(255,255,255,0.85)';
+          ctx.font = 'bold 13px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(obs.label, obs.x + obs.w / 2, obs.y + obs.h / 2);
+          if (!obs.solidForMouse) {
+            ctx.fillStyle = '#7dd3fc';
+            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.fillText('(Mouse slips under)', obs.x + obs.w / 2, obs.y + obs.h / 2 + 16);
+          }
+        }
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.fillStyle = '#0c0a09';
+      ctx.beginPath();
+      ctx.arc(mouseHole.x, mouseHole.y, mouseHole.radius + 5, Math.PI, 0, false);
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = '#bae6fd';
+      ctx.font = 'bold 11px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('MOUSE HOLE', mouseHole.x, mouseHole.y + 18);
+      ctx.restore();
+
+      for (const c of cheesePickups) {
+        if (!c.active) continue;
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.fillStyle = '#fde047';
+        ctx.strokeStyle = '#ca8a04';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -11);
+        ctx.lineTo(13, 10);
+        ctx.lineTo(-13, 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      for (const m of milkPickups) {
+        if (!m.active) continue;
+        ctx.save();
+        ctx.translate(m.x, m.y);
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.ellipse(0, 4, 15, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(0, 3, 11, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      for (const t of holeTraps) {
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.fillStyle = '#b91c1c';
+        ctx.beginPath();
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fca5a5';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⚡', 0, 0);
+        ctx.restore();
+      }
+    }
+
+    function drawOwnerVisionCone() {
+      if (GameState.playerRole === 'OWNER') return;
+      ctx.save();
+      ctx.translate(owner.x, owner.y);
+      ctx.rotate(owner.angle);
+      const grad = ctx.createRadialGradient(0, 0, 15, 0, 0, owner.visionRange);
+      grad.addColorStop(0, 'rgba(244, 63, 94, 0.36)');
+      grad.addColorStop(1, 'rgba(244, 63, 94, 0.02)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, owner.visionRange, -owner.visionHalfAngle, owner.visionHalfAngle);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawCat() {
+      ctx.save();
+      ctx.translate(cat.x, cat.y);
+
+      if (GameState.milkBoostTimer > 0) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, cat.radius + 7, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      if (GameState.playerRole === 'OWNER' && !cat.caughtByOwner) {
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = cat.scratchCooldown > 0 ? '#fde047' : '#fb7185';
+        ctx.fillText(
+          cat.scratchCooldown > 0 ? `CD: ${cat.scratchCooldown.toFixed(1)}s` : 'CLAWS READY!',
+          0,
+          -cat.radius - 10
+        );
+      }
+
+      ctx.rotate(cat.angle);
+
+      const wag = Math.sin(cat.tailPhase) * 0.45;
+      ctx.strokeStyle = '#ea580c';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-14, 0);
+      ctx.quadraticCurveTo(-24, wag * 18, -32, wag * 26);
+      ctx.stroke();
+
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.arc(0, 0, cat.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#7c2d12';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ea580c';
+      ctx.beginPath();
+      ctx.moveTo(6, -12);
+      ctx.lineTo(16, -16);
+      ctx.lineTo(13, -5);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(6, 12);
+      ctx.lineTo(16, 16);
+      ctx.lineTo(13, 5);
+      ctx.fill();
+
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(9, -6, 3.2, 0, Math.PI * 2);
+      ctx.arc(9, 6, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawMouse() {
+      if (mouse.escapedHouse) return;
+      ctx.save();
+      ctx.translate(mouse.x, mouse.y);
+      ctx.rotate(mouse.angle);
+
+      const wag = Math.sin(mouse.tailPhase) * 0.4;
+      ctx.strokeStyle = '#f472b6';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-12, 0);
+      ctx.quadraticCurveTo(-22, wag * 14, -30, wag * 18);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, mouse.radius + 2, mouse.radius - 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f9a8d4';
+      ctx.beginPath();
+      ctx.arc(3, -10, 5.5, 0, Math.PI * 2);
+      ctx.arc(3, 10, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#fb7185';
+      ctx.beginPath();
+      ctx.arc(15, 0, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawOwner() {
+      ctx.save();
+      ctx.translate(owner.x, owner.y);
+
+      if (owner.hitFlashTimer > 0 && Math.floor(owner.hitFlashTimer * 16) % 2 === 0) {
+        ctx.globalAlpha = 0.55;
+      }
+
+      ctx.rotate(owner.angle);
+
+      ctx.fillStyle = '#2563eb';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, owner.radius - 4, owner.radius + 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#1e3a8a';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fde68a';
+      ctx.beginPath();
+      ctx.arc(4, 0, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawParticles() {
+      for (const p of particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function drawFloatingTexts() {
+      for (const ft of floatingTexts) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
+        ctx.font = '800 14px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#0c0a09';
+        ctx.fillText(ft.text, ft.x + 1.5, ft.y + 1.5);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      }
+    }
+
+    function drawOffscreenIndicators() {
+      if (!GameState.isPlaying) return;
+      const target = GameState.playerRole === 'CAT'
+        ? { x: mouse.x, y: mouse.y, label: '🐭 Mouse', color: '#38bdf8' }
+        : GameState.playerRole === 'MOUSE'
+          ? { x: mouseHole.x, y: mouseHole.y, label: '🕳️ Wall Hole', color: '#38bdf8' }
+          : { x: cat.x, y: cat.y, label: '🐱 Cat', color: '#fb923c' };
+
+      const screenX = target.x - Camera.x;
+      const screenY = target.y - Camera.y;
+      if (screenX >= 20 && screenX <= canvas.width - 20 && screenY >= 20 && screenY <= canvas.height - 20) {
+        return;
+      }
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const angle = Math.atan2(screenY - cy, screenX - cx);
+      const pad = 42;
+      const ix = Math.max(pad, Math.min(canvas.width - pad, cx + Math.cos(angle) * (cx - pad)));
+      const iy = Math.max(pad, Math.min(canvas.height - pad, cy + Math.sin(angle) * (cy - pad)));
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(12, 10, 9, 0.85)';
+      ctx.strokeStyle = target.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(ix - 46, iy - 14, 92, 28, 14);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = target.color;
+      ctx.font = 'bold 11px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(target.label, ix, iy);
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // 11. MAIN ANIMATION LOOP & EVENT BINDINGS
+    // =========================================================================
+    let lastTimestamp = 0;
+    function gameLoop(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
+      lastTimestamp = timestamp;
+
+      update(dt);
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function bindEvents() {
+      const launchRole = (role) => {
+        if (Multiplayer.enabled && Multiplayer.roomCode) {
+          Multiplayer.claimRoleAndStart(role);
+        } else {
+          SoundFX.init();
+          startGame(role);
+        }
+      };
+
+      modeSoloBtn.addEventListener('click', () => {
+        Multiplayer.enabled = false;
+        multiplayerLobbyControls.classList.add('hidden');
+        hudRoomBadge.classList.add('hidden');
+        modeSoloBtn.className = 'px-4 py-2 rounded-xl bg-amber-500 text-stone-950 arcade-font font-bold text-sm shadow cursor-pointer';
+        modeMultiBtn.className = 'px-4 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 arcade-font font-bold text-sm border border-stone-600 cursor-pointer';
+        showLobbyError('');
+      });
+
+      modeMultiBtn.addEventListener('click', () => {
+        multiplayerLobbyControls.classList.remove('hidden');
+        modeMultiBtn.className = 'px-4 py-2 rounded-xl bg-emerald-500 text-stone-950 arcade-font font-bold text-sm shadow cursor-pointer';
+        modeSoloBtn.className = 'px-4 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 arcade-font font-bold text-sm border border-stone-600 cursor-pointer';
+        initCloudBackend();
+      });
+
+      createRoomBtn.addEventListener('click', () => Multiplayer.createRoom());
+      joinRoomBtn.addEventListener('click', () => Multiplayer.joinRoom(roomCodeInput.value));
+      roomCodeInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') Multiplayer.joinRoom(roomCodeInput.value);
+      });
+
+      copyRoomCodeBtn.addEventListener('click', () => {
+        if (!Multiplayer.roomCode) return;
+        const tempInput = document.createElement('input');
+        tempInput.value = Multiplayer.roomCode;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        copyRoomCodeBtn.textContent = 'Copied!';
+        setTimeout(() => { copyRoomCodeBtn.textContent = 'Copy'; }, 1500);
+      });
+
+      chooseCatBtn.addEventListener('click', () => launchRole('CAT'));
+      chooseMouseBtn.addEventListener('click', () => launchRole('MOUSE'));
+      chooseOwnerBtn.addEventListener('click', () => launchRole('OWNER'));
+
+      restartBtn.addEventListener('click', async () => {
+        if (Multiplayer.enabled && Multiplayer.roomCode) {
+          await Multiplayer.resetRoomForRematch();
+        }
+        launchRole(GameState.playerRole);
+      });
+      changeRoleBtn.addEventListener('click', returnToMenu);
+      menuQuickBtn.addEventListener('click', returnToMenu);
+      audioMuteBtn.addEventListener('click', toggleAudioMute);
+
+      speedPumpBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        triggerSpeedPump();
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') Input.up = true;
+        if (e.code === 'ArrowDown' || e.code === 'KeyS') Input.down = true;
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') Input.left = true;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') Input.right = true;
+        if (e.code === 'Space' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+          if (GameState.isPlaying) e.preventDefault();
+          Input.boostHeld = true;
+          if (GameState.isPlaying && GameState.playerRole === 'CAT') {
+            triggerSpeedPump();
+          }
+        }
+        if (!GameState.isPlaying) {
+          if (e.key === '1' || e.code === 'KeyC') launchRole('CAT');
+          if (e.key === '2' || e.code === 'KeyM') launchRole('MOUSE');
+          if (e.key === '3' || e.code === 'KeyO') launchRole('OWNER');
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') Input.up = false;
+        if (e.code === 'ArrowDown' || e.code === 'KeyS') Input.down = false;
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') Input.left = false;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') Input.right = false;
+        if (e.code === 'Space' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+          Input.boostHeld = false;
+        }
+      });
+
+      // Touch Virtual Joystick
+      const handleJoystickMove = (clientX, clientY) => {
+        const rect = virtualJoystick.getBoundingClientRect();
+        const dx = clientX - (rect.left + rect.width / 2);
+        const dy = clientY - (rect.top + rect.height / 2);
+        const dist = Math.hypot(dx, dy);
+        const maxR = rect.width / 2 - 14;
+        const angle = Math.atan2(dy, dx);
+        const clamped = Math.min(dist, maxR);
+        joystickThumb.style.transform = `translate(${Math.cos(angle) * clamped}px, ${Math.sin(angle) * clamped}px)`;
+        Input.joystickX = dist > 8 ? Math.cos(angle) : 0;
+        Input.joystickY = dist > 8 ? Math.sin(angle) : 0;
+      };
+
+      virtualJoystick.addEventListener('pointerdown', (e) => {
+        virtualJoystick.setPointerCapture(e.pointerId);
+        handleJoystickMove(e.clientX, e.clientY);
+      });
+      virtualJoystick.addEventListener('pointermove', (e) => {
+        if (e.buttons > 0 || e.pointerType === 'touch') {
+          handleJoystickMove(e.clientX, e.clientY);
+        }
+      });
+      const resetJoystick = () => {
+        joystickThumb.style.transform = 'translate(0px, 0px)';
+        Input.joystickX = 0;
+        Input.joystickY = 0;
+      };
+      virtualJoystick.addEventListener('pointerup', resetJoystick);
+      virtualJoystick.addEventListener('pointercancel', resetJoystick);
+
+      window.addEventListener('resize', resizeCanvas);
+    }
+
+    window.onload = function () {
+      resizeCanvas();
+      buildHouseLayout('CAT');
+      bindEvents();
+      requestAnimationFrame(gameLoop);
+    };
+  </script>
+</body>
+</html>
